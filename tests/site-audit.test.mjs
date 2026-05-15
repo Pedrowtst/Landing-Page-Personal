@@ -18,6 +18,7 @@ const cardFxCss = fs.readFileSync('css/card-fx.css', 'utf8');
 const scrollRailJs = fs.readFileSync('js/scroll-rail.js', 'utf8');
 const navigationJs = fs.readFileSync('js/navigation.js', 'utf8');
 const animationsCss = fs.readFileSync('css/animations.css', 'utf8');
+const dumbbell3dJs = fs.readFileSync('js/dumbbell-3d.js', 'utf8');
 
 const CANONICAL_URL = 'https://diegosantos.fit/';
 const WHATSAPP_URL = 'https://wa.me/557592022059?text=';
@@ -158,8 +159,11 @@ assert.match(scrollSmootherJs, /startNativeScrollPump\(ScrollTrigger\)/, 'native
 assert.doesNotMatch(scrollSmootherJs, /addEventListener\('click'[\s\S]*a\[href\^="#"\]/, 'scroll smoother does not install a second anchor router over the navigation module');
 assert.match(html, /lenis@1\.1\.20\/dist\/lenis\.min\.js/, 'Lenis CDN script is loaded for smooth wheel scrolling');
 assert.match(fs.readFileSync('css/base.css', 'utf8'), /html\.lenis,\s*html\.lenis body/, 'Lenis utility classes keep the document height compatible with the scroll engine');
-assert.doesNotMatch(fs.readFileSync('js/dumbbell-3d.js', 'utf8'), /innerWidth\s*<\s*760[\s\S]{0,220}#historia \.sec-num/, 'mobile dumbbell does not dock to the story number/heading band');
-assert.match(fs.readFileSync('js/dumbbell-3d.js', 'utf8'), /#historia \.story-img/, 'mobile dumbbell docks to the story image area instead of the text heading');
+assert.match(dumbbell3dJs, /scrub:\s*0\.6/, 'dumbbell animation follows ScrollTrigger scrub progress');
+assert.match(dumbbell3dJs, /onUpdate:\s*\(self\)\s*=>\s*\{[\s\S]*state\.progress\s*=\s*self\.progress/, 'dumbbell progress uses ScrollTrigger as the single scroll source');
+assert.doesNotMatch(dumbbell3dJs, /computeProgressFromScroll|computeDocumentAttachedWorldPosition|heroBottom/, 'dumbbell does not maintain a second manual scroll timeline that can disagree with ScrollTrigger');
+assert.doesNotMatch(dumbbell3dJs, /innerWidth\s*<\s*760[\s\S]{0,220}#historia \.sec-num/, 'mobile dumbbell does not dock to the story number/heading band');
+assert.match(dumbbell3dJs, /#historia \.story-img/, 'mobile dumbbell docks to the story image area instead of the text heading');
 assert.match(navigationJs, /smoothScrollTo/, 'navigation routes section links through the shared smooth scroll helper');
 assert.match(navCss, /aria-current="true"[\s\S]*linear-gradient|\.nav ul a\.is-active[\s\S]*linear-gradient/i, 'nav has a gradient active or hover treatment');
 assert.match(navCss, /color:\s*rgba\(242,\s*244,\s*248,\s*\.9[0-9]\)/, 'nav inactive text is stronger and whiter');
