@@ -6,7 +6,11 @@
       "WebSearch",
       "WebFetch(domain:gsap.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:bugs.webkit.org)"
+      "WebFetch(domain:bugs.webkit.org)",
+      "Bash(node --test tests/site-audit.test.mjs)",
+      "PowerShell(node --version)",
+      "Bash(which python3 *)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

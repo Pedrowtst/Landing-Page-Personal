@@ -1,7 +1,7 @@
 .nav-overlay {
   position: fixed;
   inset: 0;
-  z-index: 60; /* above nav (50), below the FAB (70) */
+  z-index: 60; /* below nav (65) so the hamburger stays clickable, below the FAB (70) */
   display: none;
   pointer-events: none;
 }
@@ -20,6 +20,7 @@
     rgba(5, 5, 10, .92);
   backdrop-filter: blur(28px);
   opacity: 0;
+  pointer-events: none;
   transition: opacity .35s var(--ease-out);
 }
 
@@ -30,71 +31,13 @@
   flex-direction: column;
   justify-content: center;
   align-items: stretch;
-  padding: clamp(78px, 10vh, 118px) clamp(28px, 7vw, 64px) clamp(48px, 8vh, 88px);
+  padding: clamp(96px, 13vh, 140px) clamp(28px, 7vw, 64px) clamp(48px, 8vh, 88px);
   gap: clamp(22px, 4.4vh, var(--space-8));
+  pointer-events: none;
 }
 
 .nav-overlay-panel:focus {
   outline: none;
-}
-
-.nav-overlay-head {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  min-height: clamp(44px, 12vw, 52px);
-}
-
-.nav-overlay-close {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: clamp(44px, 12vw, 52px);
-  height: clamp(44px, 12vw, 52px);
-  padding: 0;
-  border: 1px solid rgba(139, 92, 246, .46);
-  border-radius: 999px;
-  color: rgba(242, 244, 248, .9);
-  background: rgba(255, 255, 255, .04);
-  cursor: pointer;
-  overflow: hidden;
-  isolation: isolate;
-  transition:
-    transform .35s var(--ease-out),
-    border-color .35s var(--ease-out),
-    color .35s var(--ease-out),
-    box-shadow .35s var(--ease-out);
-}
-
-.nav-overlay-close::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  z-index: -1;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(139, 92, 246, .14), rgba(37, 99, 235, .08));
-  pointer-events: none;
-  transition: background .35s var(--ease-out);
-}
-
-.nav-overlay-close svg {
-  display: block;
-  width: 18px;
-  height: 18px;
-}
-
-.nav-overlay-close:hover,
-.nav-overlay-close:focus-visible {
-  color: #fff;
-  border-color: rgba(96, 165, 250, .72);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -18px rgba(96, 165, 250, .72);
-}
-
-.nav-overlay-close:hover::before,
-.nav-overlay-close:focus-visible::before {
-  background: var(--grad);
 }
 
 .nav-overlay-list {
@@ -126,6 +69,7 @@
   color: var(--c-white);
   line-height: 1;
   outline: none;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   transition: color .35s var(--ease-out), padding-left .35s var(--ease-out);
 }
@@ -169,17 +113,18 @@ html.is-keyboard-modality .nav-overlay-list a:focus-visible::after {
   align-self: stretch;
   justify-content: center;
   opacity: 0;
-}
-
-.nav-overlay.is-open {
   pointer-events: auto;
 }
+
 .nav-overlay.is-open .nav-overlay-bg {
   opacity: 1;
 }
 
+html.nav-open,
 body.nav-open {
   overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -9,12 +9,10 @@ export function initNavMenu() {
   if (!toggle || !overlay) return;
 
   const panel = overlay.querySelector('.nav-overlay-panel');
-  const backdrop = overlay.querySelector('.nav-overlay-bg');
-  const closeButton = overlay.querySelector('.nav-overlay-close');
   const items = overlay.querySelectorAll('.nav-overlay-list li');
   const cta = overlay.querySelector('.nav-overlay-cta');
   const links = overlay.querySelectorAll('.nav-overlay-list a');
-  const focusables = [closeButton, ...links, cta].filter(Boolean);
+  const focusables = [toggle, ...links, cta].filter(Boolean);
 
   let isOpen = false;
   let lastFocused = null;
@@ -57,6 +55,7 @@ export function initNavMenu() {
     overlay.classList.add('is-open');
     toggle.setAttribute('aria-expanded', 'true');
     toggle.setAttribute('aria-label', 'Fechar menu');
+    document.documentElement.classList.add('nav-open');
     document.body.classList.add('nav-open');
 
     if (REDUCED_MOTION || !window.gsap) {
@@ -93,6 +92,7 @@ export function initNavMenu() {
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', 'Abrir menu');
     overlay.classList.remove('is-open');
+    document.documentElement.classList.remove('nav-open');
     document.body.classList.remove('nav-open');
 
     const finishHide = () => {
@@ -122,10 +122,8 @@ export function initNavMenu() {
   function toggleMenu() { isOpen ? close() : open(); }
 
   toggle.addEventListener('click', toggleMenu);
-  closeButton?.addEventListener('click', close);
   links.forEach((a) => a.addEventListener('click', () => close()));
   if (cta) cta.addEventListener('click', () => close());
-  backdrop?.addEventListener('click', close);
 
   document.addEventListener('keydown', (e) => {
     if (!isOpen) return;
