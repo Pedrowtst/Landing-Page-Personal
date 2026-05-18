@@ -8,11 +8,13 @@ export function initNavMenu() {
   const overlay = document.querySelector('.nav-overlay');
   if (!toggle || !overlay) return;
 
+  const panel = overlay.querySelector('.nav-overlay-panel');
   const backdrop = overlay.querySelector('.nav-overlay-bg');
+  const closeButton = overlay.querySelector('.nav-overlay-close');
   const items = overlay.querySelectorAll('.nav-overlay-list li');
   const cta = overlay.querySelector('.nav-overlay-cta');
   const links = overlay.querySelectorAll('.nav-overlay-list a');
-  const focusables = [...links, cta].filter(Boolean);
+  const focusables = [closeButton, ...links, cta].filter(Boolean);
 
   let isOpen = false;
   let lastFocused = null;
@@ -32,13 +34,13 @@ export function initNavMenu() {
     if (REDUCED_MOTION || !window.gsap) {
       items.forEach((li) => { li.style.opacity = '1'; });
       if (cta) cta.style.opacity = '1';
-      focusables[0]?.focus({ preventScroll: true });
+      panel?.focus({ preventScroll: true });
       return;
     }
 
     if (openTween) openTween.kill();
     openTween = window.gsap.timeline({
-      onComplete: () => focusables[0]?.focus({ preventScroll: true }),
+      onComplete: () => panel?.focus({ preventScroll: true }),
     });
     openTween.fromTo(
       items,
@@ -90,6 +92,7 @@ export function initNavMenu() {
   function toggleMenu() { isOpen ? close() : open(); }
 
   toggle.addEventListener('click', toggleMenu);
+  closeButton?.addEventListener('click', close);
   links.forEach((a) => a.addEventListener('click', () => close()));
   if (cta) cta.addEventListener('click', () => close());
   backdrop?.addEventListener('click', close);
@@ -104,6 +107,11 @@ export function initNavMenu() {
     if (e.key === 'Tab' && focusables.length) {
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
+      if (!focusables.includes(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+        return;
+      }
       if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();

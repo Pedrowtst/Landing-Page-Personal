@@ -126,7 +126,12 @@
 
   <div class="nav-overlay" id="nav-overlay" hidden>
     <div class="nav-overlay-bg" aria-hidden="true"></div>
-    <div class="nav-overlay-panel" role="dialog" aria-modal="true" aria-label="Menu de navegação">
+    <div class="nav-overlay-panel" role="dialog" aria-modal="true" aria-label="Menu de navegação" tabindex="-1">
+      <button type="button" class="nav-overlay-close" aria-label="Fechar menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
       <ul class="nav-overlay-list">
         <li><a href="#historia"><span class="nav-overlay-num" aria-hidden="true">01</span>História</a></li>
         <li><a href="#metodo"><span class="nav-overlay-num" aria-hidden="true">02</span>Método</a></li>

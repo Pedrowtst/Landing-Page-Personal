@@ -2,6 +2,7 @@
   position: relative;
   padding: clamp(72px, 9vw, 112px) 0 clamp(28px, 4vw, 44px);
   border-top: 1px solid var(--c-line);
+  overflow: clip;
   overflow-x: clip;
   isolation: isolate;
   z-index: 2;
@@ -458,7 +459,11 @@
 }
 
 @media (max-width: 560px) {
-  .footer { padding: clamp(56px, 8vw, 80px) 0 clamp(24px, 4vw, 36px); }
+  .footer {
+    padding: clamp(44px, 10vw, 64px) 0 max(24px, calc(env(safe-area-inset-bottom) + 24px));
+  }
+
+  .footer-inner { gap: clamp(28px, 8vw, 40px); }
 
   .footer-cols { grid-template-columns: 1fr; gap: var(--space-7); }
 

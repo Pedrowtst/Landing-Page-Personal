@@ -22,7 +22,7 @@ const PRESETS = Object.freeze({
       dock: { x: 0, y: 0.16, z: -0.02 },
     },
     scale: 1.02,
-    dockScale: 0.24,
+    dockScale: 0.17,
     dockLift: 0,
     shrinkStart: 0.24,
     finalRotationZ: FINAL_SCREEN_ROTATION_Z,

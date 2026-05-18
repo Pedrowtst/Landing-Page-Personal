@@ -35,7 +35,10 @@ assert.ok(desktop.scale >= 1.5 && tablet.scale >= 1.24 && mobile.scale >= 0.98, 
 assert.ok(desktop.scale <= 1.56, 'desktop start scale stays within the enlarged non-clipping range');
 assert.ok(desktop.dockScale < desktop.scale, 'desktop docks smaller than its hero size');
 assert.ok(mobile.dockScale < mobile.scale, 'mobile docks smaller than its hero size');
-assert.ok(mobile.dockScale >= 0.22, 'mobile docked dumbbell remains visibly larger beside the story marker');
+assert.ok(
+  mobile.dockScale >= 0.165 && mobile.dockScale <= 0.18,
+  'mobile docked dumbbell keeps the original compact story marker size',
+);
 
 assert.ok(
   mobile.screen.start.y > 0.18 && mobile.screen.start.y < 0.38,

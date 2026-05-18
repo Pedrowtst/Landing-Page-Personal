@@ -12,6 +12,7 @@ const PROGRESS_RENDER_EPSILON = 0.00002;
 const PROGRESS_SNAP_EPSILON = 0.0012;
 const ENDPOINT_PROGRESS_SNAP_EPSILON = 0.01;
 const SCROLL_SMOOTHING_ALPHA = 0.32;
+const DOCK_ATTACH_PROGRESS = 1;
 
 export function initDumbbell3D() {
   const stage = document.getElementById('dumbbell-stage');
@@ -62,6 +63,7 @@ export function initDumbbell3D() {
   // a refresh storm because nothing listens for those events.
   let params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), innerHeight));
   let anchors = null;            // { start: world, dock: world, screen: { start, dock } }
+  let dockDocumentPoint = null;
   let scrollStart = 0;           // page scroll at which animation begins (top of #topo)
   let scrollEnd = innerHeight;   // page scroll at which animation lands at dock
   let lastViewportSignature = getViewportSignature();
@@ -75,9 +77,10 @@ export function initDumbbell3D() {
   recomputeLayout();
 
   // --- Animation state ---
-  const state = { progress: 0, targetProgress: 0, visible: 0 };
+  const state = { progress: 0, targetProgress: 0, scrollY: 0, visible: 0, docked: false };
   let lastT = -1;
   let lastVisible = -1;
+  let lastScrollY = -1;
 
   renderer.domElement.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
@@ -194,7 +197,7 @@ export function initDumbbell3D() {
       lastViewportSignature = getViewportSignature();
       syncRendererToViewport();
       recomputeLayout();
-      syncStageAttachment(state.progress >= 1);
+      syncStageAttachment();
       lastT = -1;
     };
     if (immediate) {
@@ -257,20 +260,23 @@ export function initDumbbell3D() {
       return;
     }
 
-    state.targetProgress = readScrollProgress();
+    state.scrollY = getPageScrollY();
+    state.targetProgress = readScrollProgress(state.scrollY);
     state.progress = smoothProgress(state.progress, state.targetProgress);
-    syncStageAttachment(state.progress >= 1);
+    state.docked = state.targetProgress >= DOCK_ATTACH_PROGRESS;
+    syncStageAttachment();
 
-    if (shouldRender()) {
-      renderFrame(state.progress);
-      lastT = state.progress;
+    const renderProgress = state.docked ? 1 : state.progress;
+    if (shouldRender(renderProgress)) {
+      renderFrame(renderProgress);
+      lastT = renderProgress;
       lastVisible = state.visible;
+      lastScrollY = state.scrollY;
     }
     requestAnimationFrame(animate);
   }
 
-  function readScrollProgress() {
-    const scrollY = getPageScrollY();
+  function readScrollProgress(scrollY = getPageScrollY()) {
     const span = scrollEnd - scrollStart;
     const rawProgress = span > 0 ? (scrollY - scrollStart) / span : 0;
     return rawProgress < 0 ? 0 : rawProgress > 1 ? 1 : rawProgress;
@@ -285,15 +291,17 @@ export function initDumbbell3D() {
     return current + diff * SCROLL_SMOOTHING_ALPHA;
   }
 
-  function shouldRender() {
-    if (Math.abs(state.progress - lastT) > PROGRESS_RENDER_EPSILON) return true;
+  function shouldRender(renderProgress) {
+    if (Math.abs(renderProgress - lastT) > PROGRESS_RENDER_EPSILON) return true;
+    if (state.docked && Math.abs(state.scrollY - lastScrollY) > 0.5) return true;
     if (Math.abs(state.visible - lastVisible) > 0.005) return true;
     return false;
   }
 
   function renderFrame(t) {
     const pose = getDumbbellPose(t, params, anchors);
-    const { x, y, z } = pose.position;
+    const position = state.docked ? getDockedWorldPosition(pose.position) : pose.position;
+    const { x, y, z } = position;
 
     pivot.position.set(x, y, z);
     pivot.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z);
@@ -308,16 +316,24 @@ export function initDumbbell3D() {
     renderer.render(scene, camera);
   }
 
-  function syncStageAttachment(docked) {
-    const nextAttachment = docked ? 'absolute' : 'fixed';
-    const nextTop = docked ? `${Math.round(scrollEnd)}px` : '0px';
-    if (stageAttachment === nextAttachment && stageTop === nextTop) return;
+  function syncStageAttachment() {
+    if (stageAttachment === 'fixed' && stageTop === '0px') return;
 
-    stage.style.position = nextAttachment;
-    stage.style.top = nextTop;
+    stage.style.position = 'fixed';
+    stage.style.top = '0px';
     stage.style.left = '0px';
-    stageAttachment = nextAttachment;
-    stageTop = nextTop;
+    stageAttachment = 'fixed';
+    stageTop = '0px';
+  }
+
+  function getDockedWorldPosition(fallbackPosition) {
+    if (!dockDocumentPoint || state.scrollY <= scrollEnd) return fallbackPosition;
+
+    const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * innerHeight : 0;
+    return screenToWorldPoint({
+      x: dockDocumentPoint.x,
+      y: dockDocumentPoint.y - state.scrollY - dockLift,
+    }, fallbackPosition.z);
   }
 
   // --- Layout helpers ---
@@ -334,10 +350,11 @@ export function initDumbbell3D() {
 
     const heroTrigger = document.getElementById('topo');
     scrollStart = heroTrigger ? Math.max(0, documentRect(heroTrigger).top) : 0;
-    scrollEnd = scrollStart + computeAnimationDistance();
+    dockDocumentPoint = getDockTargetDocumentPoint();
+    scrollEnd = scrollStart + computeAnimationDistance(dockDocumentPoint);
 
     const startScreen = getHeroSlotScreenPoint(scrollStart);
-    const dockScreen = getDockTargetScreenPoint(scrollEnd);
+    const dockScreen = getDockTargetScreenPoint(scrollEnd, dockDocumentPoint);
     anchors = {
       start: screenToWorldPoint(startScreen, params.fallback.start.z),
       dock: screenToWorldPoint(dockScreen, params.fallback.dock.z),
@@ -345,11 +362,10 @@ export function initDumbbell3D() {
     };
   }
 
-  function computeAnimationDistance() {
+  function computeAnimationDistance(dockPoint = getDockTargetDocumentPoint()) {
     // Distance from scrollStart to where the dock target should land at its desired
     // viewport y. Mirrors the previous getScrollEnd() heuristic but expressed as a
     // delta from the trigger's start so it works even if #topo isn't at scrollY=0.
-    const dockPoint = getDockTargetDocumentPoint();
     const minSpan = Math.round(innerHeight * 0.85);
     if (!dockPoint) return Math.max(minSpan, Math.round(innerHeight * 1.25));
     const desiredY = (params.screen.dock.y || 0.4) * innerHeight;
@@ -442,8 +458,7 @@ export function initDumbbell3D() {
     return constrainScreenPoint({ x: point.x, y: point.y - scrollAtAnchor });
   }
 
-  function getDockTargetScreenPoint(scrollAtAnchor) {
-    const point = getDockTargetDocumentPoint();
+  function getDockTargetScreenPoint(scrollAtAnchor, point = getDockTargetDocumentPoint()) {
     if (!point) return normalizedScreenPoint(params.screen.dock);
     const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * innerHeight : 0;
     return constrainScreenPoint({ x: point.x, y: point.y - scrollAtAnchor - dockLift });
