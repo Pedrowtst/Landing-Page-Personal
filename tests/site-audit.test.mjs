@@ -214,6 +214,13 @@ assert.match(dumbbell3dJs, /function shouldTrackVisualViewport\(\)[\s\S]*isFineP
 assert.match(dumbbell3dJs, /const baseSignature = \[[\s\S]*window\.innerWidth[\s\S]*window\.innerHeight[\s\S]*getResponsiveViewportWidth\(\)[\s\S]*devicePixelRatio[\s\S]*if \(!shouldTrackVisualViewport\(\)\) return baseSignature\.join\(':'\)/, 'mobile viewport signature ignores visualViewport pinch dimensions');
 assert.match(dumbbell3dJs, /responsiveWidth < 760\)[\s\S]*return Math\.min\(dpr,\s*1\.1\)/, 'mobile WebGL DPR is capped low enough to avoid Safari pinch-zoom crashes');
 assert.match(dumbbell3dJs, /responsiveWidth < 1080\)[\s\S]*return Math\.min\(dpr,\s*1\.5\)[\s\S]*return Math\.min\(dpr,\s*2\)/, 'tablet and desktop keep higher DPR for smoother dumbbell rendering');
+assert.match(dumbbell3dJs, /MOBILE_ZOOM_DISABLE_SCALE\s*=\s*1\.01/, 'mobile pinch zoom has a tight WebGL safe-mode threshold');
+assert.match(dumbbell3dJs, /function isMobileZoomUnsafe\(\)[\s\S]*!isFinePointerViewport\(\)[\s\S]*getMobileZoomScale\(\)\s*>\s*MOBILE_ZOOM_DISABLE_SCALE/, 'mobile pinch zoom is detected without affecting desktop browser zoom');
+assert.match(dumbbell3dJs, /gesturestart[\s\S]*setMobileZoomSafeMode\(true\)[\s\S]*gesturechange[\s\S]*setMobileZoomSafeMode\(true\)[\s\S]*gestureend[\s\S]*scheduleMobileZoomRestore/, 'iOS Safari gesture events immediately pause the dumbbell and restore after the gesture settles');
+assert.match(dumbbell3dJs, /touchmove[\s\S]*touches\?\.length\s*>\s*1[\s\S]*setMobileZoomSafeMode\(true\)/, 'multi-touch zoom also pauses the dumbbell on browsers without gesture events');
+assert.match(dumbbell3dJs, /mobileZoomSafeMode[\s\S]*requestAnimationFrame\(animate\)[\s\S]*return/, 'the dumbbell render loop skips WebGL rendering while mobile zoom safe mode is active');
+assert.match(dumbbell3dJs, /classList\.toggle\('is-mobile-zoom-safe',\s*active\)/, 'mobile zoom safe mode toggles a dedicated stage class instead of resizing the page');
+assert.match(stageCss, /#dumbbell-stage\.is-mobile-zoom-safe\s*\{[\s\S]*display:\s*none\s*!important/, 'mobile zoom safe mode fully removes the WebGL stage from mobile compositing');
 assert.doesNotMatch(dumbbell3dJs, /computeProgressFromScroll|computeDocumentAttachedWorldPosition|heroBottom/, 'dumbbell does not maintain a second manual scroll timeline that can disagree with ScrollTrigger');
 assert.match(html, /class="story-dumbbell-dock"/, 'story section exposes a stable dumbbell dock marker');
 assert.match(storyCss, /\.story-dumbbell-dock\s*\{[\s\S]*display:\s*inline-block/, 'story dumbbell dock marker has measurable layout');

@@ -6,6 +6,8 @@ import { getDumbbellPose, getDumbbellResponsiveParams, getDumbbellVisibility } f
 const MODEL_URL = 'assets/models/dumbbell/scene.gltf';
 const SUFFIX_RE = /\.(\d{3})$/;
 const RESIZE_DEBOUNCE_MS = 120;
+const MOBILE_ZOOM_DISABLE_SCALE = 1.01;
+const MOBILE_ZOOM_RESTORE_DELAY_MS = 220;
 const PROGRESS_RENDER_EPSILON = 0.00002;
 
 export function initDumbbell3D() {
@@ -61,6 +63,8 @@ export function initDumbbell3D() {
   let scrollEnd = innerHeight;   // page scroll at which animation lands at dock
   let lastViewportSignature = getViewportSignature();
   let resizeDebounceTimer = 0;
+  let mobileZoomSafeMode = false;
+  let mobileZoomRestoreTimer = 0;
   let stageAttachment = '';
   let stageTop = '';
 
@@ -132,12 +136,41 @@ export function initDumbbell3D() {
   }, { passive: true });
 
   window.visualViewport?.addEventListener('resize', () => {
+    syncMobileZoomSafety();
     if (!shouldTrackVisualViewport()) return;
     scheduleLayoutRefresh();
   }, { passive: true });
 
+  window.visualViewport?.addEventListener('scroll', () => {
+    syncMobileZoomSafety();
+  }, { passive: true });
+
   window.addEventListener('wheel', (event) => {
     if (event.ctrlKey) scheduleLayoutRefresh();
+  }, { passive: true, capture: true });
+
+  window.addEventListener('gesturestart', () => {
+    setMobileZoomSafeMode(true);
+  }, { passive: true });
+
+  window.addEventListener('gesturechange', () => {
+    setMobileZoomSafeMode(true);
+  }, { passive: true });
+
+  window.addEventListener('gestureend', () => {
+    scheduleMobileZoomRestore();
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (event) => {
+    if (event.touches?.length > 1) setMobileZoomSafeMode(true);
+  }, { passive: true, capture: true });
+
+  window.addEventListener('touchend', () => {
+    scheduleMobileZoomRestore();
+  }, { passive: true, capture: true });
+
+  window.addEventListener('touchcancel', () => {
+    scheduleMobileZoomRestore();
   }, { passive: true, capture: true });
 
   window.addEventListener('orientationchange', () => {
@@ -168,10 +201,60 @@ export function initDumbbell3D() {
     }
   }
 
+  function syncMobileZoomSafety() {
+    if (isMobileZoomUnsafe()) {
+      window.clearTimeout(mobileZoomRestoreTimer);
+      mobileZoomRestoreTimer = 0;
+      setMobileZoomSafeMode(true);
+      return;
+    }
+
+    if (mobileZoomSafeMode) scheduleMobileZoomRestore();
+  }
+
+  function scheduleMobileZoomRestore() {
+    if (!mobileZoomSafeMode || mobileZoomRestoreTimer) return;
+
+    mobileZoomRestoreTimer = window.setTimeout(() => {
+      mobileZoomRestoreTimer = 0;
+      if (isMobileZoomUnsafe()) {
+        setMobileZoomSafeMode(true);
+        return;
+      }
+      setMobileZoomSafeMode(false);
+    }, MOBILE_ZOOM_RESTORE_DELAY_MS);
+  }
+
+  function setMobileZoomSafeMode(active) {
+    if (mobileZoomSafeMode === active) {
+      stage.classList.toggle('is-mobile-zoom-safe', active);
+      return;
+    }
+
+    mobileZoomSafeMode = active;
+    stage.classList.toggle('is-mobile-zoom-safe', active);
+
+    if (active) {
+      stage.style.opacity = '0';
+      return;
+    }
+
+    scheduleLayoutRefresh(true);
+    lastT = -1;
+    lastVisible = -1;
+  }
+
   // --- The rAF loop. Single source of truth. ---
+  syncMobileZoomSafety();
   requestAnimationFrame(animate);
 
   function animate() {
+    syncMobileZoomSafety();
+    if (mobileZoomSafeMode) {
+      requestAnimationFrame(animate);
+      return;
+    }
+
     const scrollY = getPageScrollY();
     const span = scrollEnd - scrollStart;
     const rawProgress = span > 0 ? (scrollY - scrollStart) / span : 0;
@@ -323,6 +406,14 @@ export function initDumbbell3D() {
 
   function shouldTrackVisualViewport() {
     return isFinePointerViewport();
+  }
+
+  function getMobileZoomScale() {
+    return window.visualViewport?.scale || 1;
+  }
+
+  function isMobileZoomUnsafe() {
+    return !isFinePointerViewport() && getMobileZoomScale() > MOBILE_ZOOM_DISABLE_SCALE;
   }
 
   function hasViewportChanged() {
