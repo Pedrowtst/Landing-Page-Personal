@@ -9,6 +9,7 @@ import { initNativeScrollSync } from './scroll-sync.js';
 import { initNavMenu } from './nav-menu.js';
 import { initFocusModality } from './focus-modality.js';
 import { initFloatingFab } from './floating-fab.js';
+import { initProtection } from './protection.js';
 
 const GSAP_TIMEOUT_MS = 2500;
 
@@ -26,6 +27,7 @@ async function awaitGsap(timeoutMs = GSAP_TIMEOUT_MS) {
 }
 
 async function boot() {
+  initProtection();
   initFocusModality();
   initSectionNavigation();
   const gsapReady = await awaitGsap();
