@@ -2,6 +2,7 @@
   position: relative;
   padding: clamp(72px, 9vw, 112px) 0 clamp(28px, 4vw, 44px);
   border-top: 1px solid var(--c-line);
+  overflow-x: clip;
   isolation: isolate;
   z-index: 2;
 }

@@ -29,6 +29,9 @@ const cardFxCss = fs.readFileSync('css/card-fx.css', 'utf8');
 const scrollRailJs = fs.readFileSync('js/scroll-rail.js', 'utf8');
 const navigationJs = fs.readFileSync('js/navigation.js', 'utf8');
 const navMenuJs = fs.readFileSync('js/nav-menu.js', 'utf8');
+const floatingFabJs = fs.existsSync('js/floating-fab.js')
+  ? fs.readFileSync('js/floating-fab.js', 'utf8')
+  : '';
 const focusModalityJs = fs.existsSync('js/focus-modality.js')
   ? fs.readFileSync('js/focus-modality.js', 'utf8')
   : '';
@@ -160,6 +163,10 @@ for (const href of primaryNavHrefs) {
 assert.match(mainJs, /initSectionNavigation/, 'section navigation module is booted');
 assert.match(mainJs, /initCardFx/, 'interactive card effect module is booted');
 assert.match(mainJs, /initFocusModality/, 'focus modality module is booted before interactive components');
+assert.match(mainJs, /initFloatingFab/, 'floating WhatsApp button visibility is booted');
+assert.match(floatingFabJs, /\.hero \.ctas/, 'floating WhatsApp button uses the hero CTA stack as its overlap guard');
+assert.match(floatingFabJs, /is-fab-visible/, 'floating WhatsApp button toggles a body visibility class instead of covering hero content by default');
+assert.match(floatingFabJs, /requestAnimationFrame/, 'floating WhatsApp button scroll checks are frame-throttled');
 assert.match(focusModalityJs, /event\.key\s*===\s*'Tab'[\s\S]*is-keyboard-modality/, 'keyboard modality is enabled only by Tab navigation');
 assert.match(focusModalityJs, /classList\.remove\('is-keyboard-modality'\)[\s\S]*pointerdown[\s\S]*clearKeyboardModality/, 'pointer/touch input clears keyboard modality');
 assert.match(focusModalityJs, /scroll[\s\S]*clearKeyboardModality/, 'ordinary mobile scroll clears keyboard modality so the skip link cannot remain exposed');
@@ -199,6 +206,9 @@ assert.doesNotMatch(scrollSyncJs, /addEventListener\('scrollend'[\s\S]*requestVi
 assert.doesNotMatch(scrollSyncJs, /addEventListener\('click'[\s\S]*a\[href\^="#"\]/, 'scroll sync does not install a second anchor router over the navigation module');
 assert.doesNotMatch(baseCss, /html,\s*body\s*\{[\s\S]*overflow-x:\s*hidden/, 'body is not turned into a competing horizontal-overflow scroll container');
 assert.match(baseCss, /body\s*\{[\s\S]*overflow-x:\s*clip/, 'body clips horizontal overflow without becoming the wheel scroll container');
+assert.match(baseCss, /@media\s*\(max-width:\s*768px\)[\s\S]*\.bg-blobs \.b1[\s\S]*left:\s*-180px[\s\S]*\.bg-blobs \.b2[\s\S]*right:\s*-160px[\s\S]*\.bg-blobs \.b3[\s\S]*width:\s*300px/, 'mobile decorative blobs stay inside a controlled clipped band during pinch zoom');
+assert.match(tickerCss, /\.ticker\s*\{[\s\S]*contain:\s*paint/, 'ticker marquee is paint-contained so its duplicated rail cannot expand mobile body width');
+assert.match(footerCss, /\.footer\s*\{[\s\S]*overflow-x:\s*clip/, 'footer glow is clipped by the footer instead of expanding mobile body width');
 assert.doesNotMatch(dumbbell3dJs, /ScrollTrigger\.create/, 'dumbbell path is driven by the native page scroll source, not a second ScrollTrigger timeline');
 assert.match(dumbbell3dJs, /function getPageScrollY\(\)[\s\S]*document\.body\?\.scrollTop/, 'dumbbell reads body.scrollTop as a fallback when browsers route wheel input to body');
 assert.match(dumbbell3dJs, /const scrollY\s*=\s*getPageScrollY\(\)/, 'dumbbell render loop uses the normalized page scroll source');
@@ -272,6 +282,10 @@ assert.match(servicesCss, /\.svc \.ic::before\s*\{[\s\S]*inset:\s*0[\s\S]*border
 assert.match(fabCss, /\.fab-whatsapp\s*\{(?=[\s\S]*background:\s*transparent)(?=[\s\S]*isolation:\s*isolate)/, 'floating WhatsApp button keeps gradient paint isolated from the transformed circle');
 assert.match(fabCss, /\.fab-whatsapp::before\s*\{[\s\S]*inset:\s*0[\s\S]*border-radius:\s*inherit[\s\S]*background:\s*var\(--grad\)/, 'floating WhatsApp gradient is painted on an inner layer');
 assert.doesNotMatch(fabCss, /\.fab-whatsapp\s*\{[^}]*background:\s*var\(--grad\)/, 'floating WhatsApp button does not paint the transformed anchor itself');
+assert.match(fabCss, /\.fab-whatsapp\s*\{[\s\S]*opacity:\s*0[\s\S]*visibility:\s*hidden/, 'floating WhatsApp button is hidden until it cannot overlap the hero CTAs');
+assert.match(fabCss, /body\.is-fab-visible\s+\.fab-whatsapp[\s\S]*opacity:\s*1[\s\S]*visibility:\s*visible/, 'floating WhatsApp button appears only after the hero CTA guard clears');
+assert.match(fabCss, /\.fab-whatsapp\s*\{[\s\S]*pointer-events:\s*none[\s\S]*body\.is-fab-visible\s+\.fab-whatsapp[\s\S]*pointer-events:\s*auto/, 'hidden floating WhatsApp button cannot intercept mobile taps');
+assert.match(fabCss, /env\(safe-area-inset-bottom\)/, 'floating WhatsApp button respects mobile safe-area bottom insets');
 assert.match(faqCss, /\.q-ico\s*\{(?=[\s\S]*overflow:\s*hidden)(?=[\s\S]*background-clip:\s*padding-box)/, 'FAQ icon circle clips its hover fill cleanly');
 assert.match(faqCss, /\.q-ico::before\s*\{[\s\S]*inset:\s*0[\s\S]*border-radius:\s*inherit[\s\S]*background:\s*transparent/, 'FAQ icon fill is painted on an isolated inner circle');
 assert.match(faqCss, /\.q\.open \.q-ico::before\s*\{[\s\S]*background:\s*var\(--grad\)/, 'FAQ open-state gradient stays on the isolated inner circle');

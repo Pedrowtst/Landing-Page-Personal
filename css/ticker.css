@@ -3,6 +3,7 @@
   border-top: 1px solid var(--c-line);
   border-bottom: 1px solid var(--c-line);
   overflow: hidden;
+  contain: paint;
   white-space: nowrap;
   background: rgba(255, 255, 255, .01);
 }

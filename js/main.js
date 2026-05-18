@@ -8,6 +8,7 @@ import { initCardFx } from './card-fx.js';
 import { initNativeScrollSync } from './scroll-sync.js';
 import { initNavMenu } from './nav-menu.js';
 import { initFocusModality } from './focus-modality.js';
+import { initFloatingFab } from './floating-fab.js';
 
 const GSAP_TIMEOUT_MS = 2500;
 
@@ -39,6 +40,7 @@ async function boot() {
   initFaq();
   initScrollRail();
   initNavMenu();
+  initFloatingFab();
   initDumbbell3D();
 }
 

@@ -92,6 +92,12 @@ body::before {
 .bg-blobs .b2 { width: 520px; height: 520px; background: #2563EB; right: -160px; top: 30%; }
 .bg-blobs .b3 { width: 480px; height: 480px; background: #8B5CF6; left: 30%; bottom: -200px; opacity: .25; }
 
+@media (max-width: 768px) {
+  .bg-blobs .b1 { width: 360px; height: 360px; left: -180px; top: -120px; }
+  .bg-blobs .b2 { width: 320px; height: 320px; right: -160px; top: 24%; }
+  .bg-blobs .b3 { width: 300px; height: 300px; left: 34%; bottom: -150px; }
+}
+
 h1, h2, h3, h4 {
   font-family: 'Exo 2', sans-serif;
   font-weight: 800;
