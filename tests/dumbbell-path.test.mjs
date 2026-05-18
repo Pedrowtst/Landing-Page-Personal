@@ -31,10 +31,11 @@ const mobile = getDumbbellResponsiveParams(390, 844);
 
 assert.ok(desktop.scale > tablet.scale, 'desktop starts larger than tablet');
 assert.ok(tablet.scale > mobile.scale, 'tablet starts larger than mobile');
-assert.ok(desktop.scale >= 1.5 && tablet.scale >= 1.24 && mobile.scale >= 0.7, 'dumbbell scales are intentionally larger across desktop, tablet, and mobile');
+assert.ok(desktop.scale >= 1.5 && tablet.scale >= 1.24 && mobile.scale >= 0.98, 'dumbbell scales are intentionally larger across desktop, tablet, and mobile');
 assert.ok(desktop.scale <= 1.56, 'desktop start scale stays within the enlarged non-clipping range');
 assert.ok(desktop.dockScale < desktop.scale, 'desktop docks smaller than its hero size');
 assert.ok(mobile.dockScale < mobile.scale, 'mobile docks smaller than its hero size');
+assert.ok(mobile.dockScale >= 0.22, 'mobile docked dumbbell remains visibly larger beside the story marker');
 
 assert.ok(
   mobile.screen.start.y > 0.18 && mobile.screen.start.y < 0.38,

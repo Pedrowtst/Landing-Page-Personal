@@ -9,6 +9,9 @@ const RESIZE_DEBOUNCE_MS = 120;
 const MOBILE_ZOOM_DISABLE_SCALE = 1.01;
 const MOBILE_ZOOM_RESTORE_DELAY_MS = 220;
 const PROGRESS_RENDER_EPSILON = 0.00002;
+const PROGRESS_SNAP_EPSILON = 0.0012;
+const ENDPOINT_PROGRESS_SNAP_EPSILON = 0.01;
+const SCROLL_SMOOTHING_ALPHA = 0.32;
 
 export function initDumbbell3D() {
   const stage = document.getElementById('dumbbell-stage');
@@ -20,7 +23,7 @@ export function initDumbbell3D() {
   // --- Renderer / scene / camera ---
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
-    antialias: !isMobile,
+    antialias: true,
     powerPreference: 'high-performance',
   });
   renderer.setPixelRatio(getCappedDpr());
@@ -72,7 +75,7 @@ export function initDumbbell3D() {
   recomputeLayout();
 
   // --- Animation state ---
-  const state = { progress: 0, visible: 0 };
+  const state = { progress: 0, targetProgress: 0, visible: 0 };
   let lastT = -1;
   let lastVisible = -1;
 
@@ -249,16 +252,13 @@ export function initDumbbell3D() {
   requestAnimationFrame(animate);
 
   function animate() {
-    syncMobileZoomSafety();
     if (mobileZoomSafeMode) {
       requestAnimationFrame(animate);
       return;
     }
 
-    const scrollY = getPageScrollY();
-    const span = scrollEnd - scrollStart;
-    const rawProgress = span > 0 ? (scrollY - scrollStart) / span : 0;
-    state.progress = rawProgress < 0 ? 0 : rawProgress > 1 ? 1 : rawProgress;
+    state.targetProgress = readScrollProgress();
+    state.progress = smoothProgress(state.progress, state.targetProgress);
     syncStageAttachment(state.progress >= 1);
 
     if (shouldRender()) {
@@ -267,6 +267,22 @@ export function initDumbbell3D() {
       lastVisible = state.visible;
     }
     requestAnimationFrame(animate);
+  }
+
+  function readScrollProgress() {
+    const scrollY = getPageScrollY();
+    const span = scrollEnd - scrollStart;
+    const rawProgress = span > 0 ? (scrollY - scrollStart) / span : 0;
+    return rawProgress < 0 ? 0 : rawProgress > 1 ? 1 : rawProgress;
+  }
+
+  function smoothProgress(current, target) {
+    const diff = target - current;
+    const snapEpsilon = target <= 0 || target >= 1
+      ? ENDPOINT_PROGRESS_SNAP_EPSILON
+      : PROGRESS_SNAP_EPSILON;
+    if (Math.abs(diff) <= snapEpsilon) return target;
+    return current + diff * SCROLL_SMOOTHING_ALPHA;
   }
 
   function shouldRender() {
@@ -350,7 +366,7 @@ export function initDumbbell3D() {
   function getCappedDpr() {
     const dpr = window.devicePixelRatio || 1;
     const responsiveWidth = getResponsiveViewportWidth();
-    if (responsiveWidth < 760) return Math.min(dpr, 1.1);
+    if (responsiveWidth < 760) return Math.min(dpr, 1.35);
     if (responsiveWidth < 1080) return Math.min(dpr, 1.5);
     return Math.min(dpr, 2);
   }
