@@ -30,18 +30,23 @@
   flex-direction: column;
   justify-content: center;
   align-items: stretch;
-  padding: clamp(96px, 14vh, 140px) clamp(28px, 7vw, 64px) clamp(48px, 8vh, 88px);
-  gap: var(--space-8);
+  padding: clamp(78px, 10vh, 118px) clamp(28px, 7vw, 64px) clamp(48px, 8vh, 88px);
+  gap: clamp(22px, 4.4vh, var(--space-8));
 }
 
 .nav-overlay-panel:focus {
   outline: none;
 }
 
+.nav-overlay-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: clamp(44px, 12vw, 52px);
+}
+
 .nav-overlay-close {
-  position: absolute;
-  top: clamp(18px, 4.5vw, 34px);
-  right: clamp(18px, 5vw, 42px);
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -120,7 +125,13 @@
   text-decoration: none;
   color: var(--c-white);
   line-height: 1;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   transition: color .35s var(--ease-out), padding-left .35s var(--ease-out);
+}
+.nav-overlay-list a:focus {
+  outline: none;
+  box-shadow: none;
 }
 .nav-overlay-list a::after {
   content: "";
@@ -133,7 +144,7 @@
   transition: width .45s var(--ease-out);
 }
 .nav-overlay-list a:hover,
-.nav-overlay-list a:focus-visible {
+html.is-keyboard-modality .nav-overlay-list a:focus-visible {
   padding-left: 12px;
   color: transparent;
   background: var(--grad-text);
@@ -141,7 +152,7 @@
   background-clip: text;
 }
 .nav-overlay-list a:hover::after,
-.nav-overlay-list a:focus-visible::after {
+html.is-keyboard-modality .nav-overlay-list a:focus-visible::after {
   width: 100%;
 }
 

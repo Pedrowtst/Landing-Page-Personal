@@ -20,10 +20,38 @@ export function initNavMenu() {
   let lastFocused = null;
   let openTween = null;
 
+  function shouldMoveFocus() {
+    return document.documentElement.classList.contains('is-keyboard-modality');
+  }
+
+  function blurActiveElement() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function clearOverlayLinkState() {
+    links.forEach((link) => {
+      link.classList.remove('is-active');
+      link.removeAttribute('aria-current');
+      link.blur();
+    });
+  }
+
+  function focusPanelIfKeyboard() {
+    clearOverlayLinkState();
+    if (shouldMoveFocus()) {
+      panel?.focus({ preventScroll: true });
+      return;
+    }
+    blurActiveElement();
+  }
+
   function open() {
     if (isOpen) return;
     isOpen = true;
     lastFocused = document.activeElement;
+    clearOverlayLinkState();
 
     overlay.removeAttribute('hidden');
     overlay.classList.add('is-open');
@@ -34,13 +62,13 @@ export function initNavMenu() {
     if (REDUCED_MOTION || !window.gsap) {
       items.forEach((li) => { li.style.opacity = '1'; });
       if (cta) cta.style.opacity = '1';
-      panel?.focus({ preventScroll: true });
+      focusPanelIfKeyboard();
       return;
     }
 
     if (openTween) openTween.kill();
     openTween = window.gsap.timeline({
-      onComplete: () => panel?.focus({ preventScroll: true }),
+      onComplete: focusPanelIfKeyboard,
     });
     openTween.fromTo(
       items,
@@ -84,8 +112,10 @@ export function initNavMenu() {
       }
     }
 
-    if (lastFocused && document.contains(lastFocused)) {
+    if (shouldMoveFocus() && lastFocused && document.contains(lastFocused)) {
       lastFocused.focus({ preventScroll: true });
+    } else {
+      blurActiveElement();
     }
   }
 
