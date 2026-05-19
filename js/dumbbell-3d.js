@@ -9,12 +9,8 @@ const RESIZE_DEBOUNCE_MS = 120;
 const MOBILE_ZOOM_DISABLE_SCALE = 1.01;
 const MOBILE_ZOOM_RESTORE_DELAY_MS = 220;
 const PROGRESS_RENDER_EPSILON = 0.00002;
-const PROGRESS_SNAP_EPSILON = 0.0012;
-const ENDPOINT_PROGRESS_SNAP_EPSILON = 0.01;
-const SCROLL_SMOOTHING_ALPHA_DESKTOP = 0.32;
-const SCROLL_SMOOTHING_ALPHA_MOBILE = 0.22;
+const PROGRESS_NOISE_EPSILON = 0.0008;
 const DOCK_ATTACH_PROGRESS = 1;
-const DOCK_SETTLE_PROGRESS = 0.992;
 const DOCK_HOLD_PROGRESS = 0.985;
 // iOS URL bar shows/hides ~80-120px. Layout refreshes shorter than this on
 // mobile create teleports; gate them so only real orientation changes recompute.
@@ -89,7 +85,6 @@ export function initDumbbell3D() {
   let stageOpacityLast = -1;     // cache to avoid duplicate style writes
   let stableInnerHeight = innerHeight;
   const posOut = { x: 0, y: 0, z: 0 };
-  const smoothingAlpha = isMobile ? SCROLL_SMOOTHING_ALPHA_MOBILE : SCROLL_SMOOTHING_ALPHA_DESKTOP;
 
   applyCameraDepth();
   recomputeLayout();
@@ -299,7 +294,7 @@ export function initDumbbell3D() {
 
     state.scrollY = getPageScrollY();
     state.targetProgress = readScrollProgress(state.scrollY);
-    state.progress = smoothProgress(state.progress, state.targetProgress);
+    state.progress = resolveScrollProgress(state.progress, state.targetProgress);
     state.docked = updateDockState(state.docked, state.progress, state.targetProgress);
 
     const renderProgress = state.docked ? 1 : state.progress;
@@ -318,18 +313,15 @@ export function initDumbbell3D() {
     return rawProgress < 0 ? 0 : rawProgress > 1 ? 1 : rawProgress;
   }
 
-  function smoothProgress(current, target) {
-    const diff = target - current;
-    const snapEpsilon = target <= 0 || target >= 1
-      ? ENDPOINT_PROGRESS_SNAP_EPSILON
-      : PROGRESS_SNAP_EPSILON;
-    if (Math.abs(diff) <= snapEpsilon) return target;
-    return current + diff * smoothingAlpha;
+  function resolveScrollProgress(current, target) {
+    if (target <= 0 || target >= 1) return target;
+    if (Math.abs(target - current) <= PROGRESS_NOISE_EPSILON) return current;
+    return target;
   }
 
   function updateDockState(wasDocked, progress, target) {
     if (wasDocked) return target >= DOCK_HOLD_PROGRESS;
-    return target >= DOCK_ATTACH_PROGRESS && progress >= DOCK_SETTLE_PROGRESS;
+    return target >= DOCK_ATTACH_PROGRESS && progress >= DOCK_ATTACH_PROGRESS;
   }
 
   function shouldRender(renderProgress) {
