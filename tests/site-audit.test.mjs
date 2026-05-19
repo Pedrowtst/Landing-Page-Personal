@@ -256,9 +256,12 @@ assert.match(dumbbell3dJs, /function isMobileZoomUnsafe\(\)[\s\S]*!isFinePointer
 assert.match(dumbbell3dJs, /gesturestart[\s\S]*setMobileZoomSafeMode\(true\)[\s\S]*gesturechange[\s\S]*setMobileZoomSafeMode\(true\)[\s\S]*gestureend[\s\S]*scheduleMobileZoomRestore/, 'iOS Safari gesture events immediately pause the dumbbell and restore after the gesture settles');
 assert.match(dumbbell3dJs, /touchmove[\s\S]*touches\?\.length\s*>\s*1[\s\S]*setMobileZoomSafeMode\(true\)/, 'multi-touch zoom also pauses the dumbbell on browsers without gesture events');
 assert.match(dumbbell3dJs, /mobileZoomSafeMode[\s\S]*requestAnimationFrame\(animate\)[\s\S]*return/, 'the dumbbell render loop skips WebGL rendering while mobile zoom safe mode is active');
-assert.match(dumbbell3dJs, /SCROLL_SMOOTHING_ALPHA\s*=\s*0\.\d+/, 'dumbbell scroll progress has a frame-smoothed target to reduce native scroll stutter');
+assert.match(dumbbell3dJs, /SCROLL_SMOOTHING_ALPHA_DESKTOP\s*=\s*0\.\d+/, 'dumbbell desktop scroll progress has a frame-smoothed target to reduce native scroll stutter');
+assert.match(dumbbell3dJs, /SCROLL_SMOOTHING_ALPHA_MOBILE\s*=\s*0\.\d+/, 'dumbbell uses a softer mobile smoothing alpha so touch inertial scroll does not stutter through the path');
 assert.match(dumbbell3dJs, /targetProgress[\s\S]*readScrollProgress\(state\.scrollY\)[\s\S]*smoothProgress\(state\.progress,\s*state\.targetProgress\)/, 'dumbbell renders from smoothed progress instead of raw scroll jumps');
-assert.match(dumbbell3dJs, /function smoothProgress\([\s\S]*PROGRESS_SNAP_EPSILON[\s\S]*SCROLL_SMOOTHING_ALPHA/, 'dumbbell progress snaps cleanly at rest and damps intermediate scroll jumps');
+assert.match(dumbbell3dJs, /function smoothProgress\([\s\S]*PROGRESS_SNAP_EPSILON[\s\S]*smoothingAlpha/, 'dumbbell progress snaps cleanly at rest and damps intermediate scroll jumps using the device-tuned smoothing alpha');
+assert.match(dumbbell3dJs, /cachedPath\s*=\s*buildDumbbellPath\(/, 'dumbbell path points are precomputed once per layout instead of every render frame');
+assert.match(dumbbell3dJs, /MOBILE_HEIGHT_NOISE_PX/, 'iOS URL bar collapse is detected so the dumbbell does not teleport mid-scroll on touch viewports');
 assert.match(dumbbell3dJs, /DOCK_ATTACH_PROGRESS\s*=\s*1/, 'dumbbell docks only at the completed endpoint');
 assert.doesNotMatch(dumbbell3dJs, /DOCK_RELEASE_PROGRESS/, 'dumbbell no longer needs a release threshold because the canvas coordinate system never switches');
 assert.match(dumbbell3dJs, /const state = \{ progress: 0, targetProgress: 0, scrollY: 0, visible: 0, docked: false \}/, 'dumbbell tracks scrollY separately from eased progress for document-docked rendering');

@@ -100,12 +100,22 @@ export function getDumbbellResponsiveParams(width, height) {
   };
 }
 
-export function getDumbbellPose(progress, params, anchors) {
+export function buildDumbbellPath(start, dock, params) {
+  const p = params || getDumbbellResponsiveParams(1280, 720);
+  return buildPathPoints(toVector(start), toVector(dock), p);
+}
+
+export function getDumbbellPose(progress, params, pathOrAnchors, outPosition) {
   const p = params || getDumbbellResponsiveParams(1280, 720);
   const t = clamp(progress, 0, 1);
-  const resolved = resolveAnchors(p, anchors);
-  const points = buildPathPoints(resolved.start, resolved.dock, p);
-  const position = sampleCatmullRom(points, t);
+  const points = isPathArray(pathOrAnchors)
+    ? pathOrAnchors
+    : buildPathPoints(
+        toVector(pathOrAnchors?.start || p.fallback.start),
+        toVector(pathOrAnchors?.dock || p.fallback.dock),
+        p,
+      );
+  const position = sampleCatmullRom(points, t, outPosition);
   const ease = easeInOutCubic(t);
   const spinTurns = Number.isFinite(p.spinTurns) ? p.spinTurns : 0;
   const tumbleTurns = Number.isFinite(p.tumbleTurns) ? p.tumbleTurns : 0;
@@ -121,6 +131,10 @@ export function getDumbbellPose(progress, params, anchors) {
       z: ease * (tumbleTurns * TAU + finalRotationZ),
     },
   };
+}
+
+function isPathArray(value) {
+  return Array.isArray(value) && value.length > 0 && typeof value[0]?.t === 'number';
 }
 
 export function getDumbbellVisibility(progress, params) {
@@ -192,10 +206,22 @@ function scaleVector(vector, xScale, yScale) {
   };
 }
 
-function sampleCatmullRom(points, t) {
+function sampleCatmullRom(points, t, out) {
   const last = points.length - 1;
-  if (t <= points[0].t) return toVector(points[0]);
-  if (t >= points[last].t) return toVector(points[last]);
+  const target = out || { x: 0, y: 0, z: 0 };
+
+  if (t <= points[0].t) {
+    target.x = points[0].x;
+    target.y = points[0].y;
+    target.z = points[0].z;
+    return target;
+  }
+  if (t >= points[last].t) {
+    target.x = points[last].x;
+    target.y = points[last].y;
+    target.z = points[last].z;
+    return target;
+  }
 
   let i = 0;
   while (i < last && t > points[i + 1].t) i++;
@@ -206,11 +232,10 @@ function sampleCatmullRom(points, t) {
   const p3 = points[Math.min(last, i + 2)];
   const localT = (t - p1.t) / (p2.t - p1.t);
 
-  return {
-    x: catmull(p0.x, p1.x, p2.x, p3.x, localT),
-    y: catmull(p0.y, p1.y, p2.y, p3.y, localT),
-    z: catmull(p0.z, p1.z, p2.z, p3.z, localT),
-  };
+  target.x = catmull(p0.x, p1.x, p2.x, p3.x, localT);
+  target.y = catmull(p0.y, p1.y, p2.y, p3.y, localT);
+  target.z = catmull(p0.z, p1.z, p2.z, p3.z, localT);
+  return target;
 }
 
 function catmull(p0, p1, p2, p3, t) {

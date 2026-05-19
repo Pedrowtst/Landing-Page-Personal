@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { getDumbbellPose, getDumbbellResponsiveParams, getDumbbellVisibility } from './dumbbell-path.mjs';
+import { buildDumbbellPath, getDumbbellPose, getDumbbellResponsiveParams, getDumbbellVisibility } from './dumbbell-path.mjs';
 
 const MODEL_URL = 'assets/models/dumbbell/scene.gltf';
 const SUFFIX_RE = /\.(\d{3})$/;
@@ -11,8 +11,12 @@ const MOBILE_ZOOM_RESTORE_DELAY_MS = 220;
 const PROGRESS_RENDER_EPSILON = 0.00002;
 const PROGRESS_SNAP_EPSILON = 0.0012;
 const ENDPOINT_PROGRESS_SNAP_EPSILON = 0.01;
-const SCROLL_SMOOTHING_ALPHA = 0.32;
+const SCROLL_SMOOTHING_ALPHA_DESKTOP = 0.32;
+const SCROLL_SMOOTHING_ALPHA_MOBILE = 0.22;
 const DOCK_ATTACH_PROGRESS = 1;
+// iOS URL bar shows/hides ~80-120px. Layout refreshes shorter than this on
+// mobile create teleports; gate them so only real orientation changes recompute.
+const MOBILE_HEIGHT_NOISE_PX = 140;
 
 export function initDumbbell3D() {
   const stage = document.getElementById('dumbbell-stage');
@@ -63,6 +67,7 @@ export function initDumbbell3D() {
   // a refresh storm because nothing listens for those events.
   let params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), innerHeight));
   let anchors = null;            // { start: world, dock: world, screen: { start, dock } }
+  let cachedPath = null;         // pre-built Catmull-Rom path for the current anchors
   let dockDocumentPoint = null;
   let scrollStart = 0;           // page scroll at which animation begins (top of #topo)
   let scrollEnd = innerHeight;   // page scroll at which animation lands at dock
@@ -72,9 +77,14 @@ export function initDumbbell3D() {
   let mobileZoomRestoreTimer = 0;
   let stageAttachment = '';
   let stageTop = '';
+  let stageOpacityLast = -1;     // cache to avoid duplicate style writes
+  let stableInnerHeight = innerHeight;
+  const posOut = { x: 0, y: 0, z: 0 };
+  const smoothingAlpha = isMobile ? SCROLL_SMOOTHING_ALPHA_MOBILE : SCROLL_SMOOTHING_ALPHA_DESKTOP;
 
   applyCameraDepth();
   recomputeLayout();
+  syncStageAttachment();
 
   // --- Animation state ---
   const state = { progress: 0, targetProgress: 0, scrollY: 0, visible: 0, docked: false };
@@ -194,9 +204,18 @@ export function initDumbbell3D() {
     window.clearTimeout(resizeDebounceTimer);
     const run = () => {
       if (!immediate && !hasViewportChanged()) return;
+      // On touch viewports the iOS URL bar collapse fires a resize event with
+      // an innerHeight change of ~80-120px. Treat that as visual noise: keep
+      // the renderer in sync with the new viewport but don't retarget the
+      // anchored animation, which would teleport the dumbbell mid-scroll.
+      const heightDelta = Math.abs(innerHeight - stableInnerHeight);
+      const isUrlBarNoise = isMobile && heightDelta > 0 && heightDelta < MOBILE_HEIGHT_NOISE_PX
+        && innerWidth === Math.round(params.viewport?.width || innerWidth);
       lastViewportSignature = getViewportSignature();
       syncRendererToViewport();
-      recomputeLayout();
+      if (!isUrlBarNoise) {
+        recomputeLayout();
+      }
       syncStageAttachment();
       lastT = -1;
     };
@@ -264,7 +283,6 @@ export function initDumbbell3D() {
     state.targetProgress = readScrollProgress(state.scrollY);
     state.progress = smoothProgress(state.progress, state.targetProgress);
     state.docked = state.targetProgress >= DOCK_ATTACH_PROGRESS;
-    syncStageAttachment();
 
     const renderProgress = state.docked ? 1 : state.progress;
     if (shouldRender(renderProgress)) {
@@ -288,7 +306,7 @@ export function initDumbbell3D() {
       ? ENDPOINT_PROGRESS_SNAP_EPSILON
       : PROGRESS_SNAP_EPSILON;
     if (Math.abs(diff) <= snapEpsilon) return target;
-    return current + diff * SCROLL_SMOOTHING_ALPHA;
+    return current + diff * smoothingAlpha;
   }
 
   function shouldRender(renderProgress) {
@@ -299,11 +317,15 @@ export function initDumbbell3D() {
   }
 
   function renderFrame(t) {
-    const pose = getDumbbellPose(t, params, anchors);
+    const path = cachedPath || (cachedPath = buildDumbbellPath(
+      anchors?.start || params.fallback.start,
+      anchors?.dock || params.fallback.dock,
+      params,
+    ));
+    const pose = getDumbbellPose(t, params, path, posOut);
     const position = state.docked ? getDockedWorldPosition(pose.position) : pose.position;
-    const { x, y, z } = position;
 
-    pivot.position.set(x, y, z);
+    pivot.position.set(position.x, position.y, position.z);
     pivot.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z);
 
     const shrinkStart = Number.isFinite(params.shrinkStart) ? params.shrinkStart : 0.62;
@@ -311,7 +333,12 @@ export function initDumbbell3D() {
     const dockScale = Number.isFinite(params.dockScale) ? params.dockScale : params.scale * 0.16;
     pivot.scale.setScalar(THREE.MathUtils.lerp(params.scale, dockScale, shrink));
 
-    stage.style.opacity = (state.visible * getDumbbellVisibility(t, params)).toFixed(3);
+    const opacityValue = state.visible * getDumbbellVisibility(t, params);
+    const opacityRounded = Math.round(opacityValue * 1000) / 1000;
+    if (opacityRounded !== stageOpacityLast) {
+      stage.style.opacity = opacityRounded.toFixed(3);
+      stageOpacityLast = opacityRounded;
+    }
 
     renderer.render(scene, camera);
   }
@@ -346,6 +373,7 @@ export function initDumbbell3D() {
   }
 
   function recomputeLayout() {
+    stableInnerHeight = innerHeight;
     params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), innerHeight));
 
     const heroTrigger = document.getElementById('topo');
@@ -360,6 +388,7 @@ export function initDumbbell3D() {
       dock: screenToWorldPoint(dockScreen, params.fallback.dock.z),
       screen: { start: startScreen, dock: dockScreen },
     };
+    cachedPath = buildDumbbellPath(anchors.start, anchors.dock, params);
   }
 
   function computeAnimationDistance(dockPoint = getDockTargetDocumentPoint()) {
