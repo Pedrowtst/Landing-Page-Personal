@@ -46,7 +46,9 @@ export function initNativeScrollSync() {
   window.addEventListener('mousedown', startInputPump, { passive: true, capture: true });
   window.addEventListener('resize', () => requestViewportRefresh(ScrollTrigger), { passive: true });
   window.addEventListener('orientationchange', () => requestViewportRefresh(ScrollTrigger), { passive: true });
-  window.visualViewport?.addEventListener('resize', () => requestViewportRefresh(ScrollTrigger), { passive: true });
+  window.visualViewport?.addEventListener('resize', () => {
+    if (shouldTrackVisualViewportRefresh()) requestViewportRefresh(ScrollTrigger);
+  }, { passive: true });
   window.addEventListener('load', () => requestViewportRefresh(ScrollTrigger, true), { passive: true });
   document.fonts?.ready?.then(() => requestViewportRefresh(ScrollTrigger, true)).catch(() => {});
 
@@ -122,15 +124,24 @@ function isScrollbarPointer(event) {
 }
 
 function getViewportSignature() {
-  const visualViewport = window.visualViewport;
-  return [
+  const baseSignature = [
     window.innerWidth,
     window.innerHeight,
     window.devicePixelRatio || 1,
+  ];
+  if (!shouldTrackVisualViewportRefresh()) return baseSignature.join(':');
+
+  const visualViewport = window.visualViewport;
+  return [
+    ...baseSignature,
     visualViewport?.width || 0,
     visualViewport?.height || 0,
     visualViewport?.scale || 1,
   ].join(':');
+}
+
+function shouldTrackVisualViewportRefresh() {
+  return window.matchMedia?.('(hover: hover) and (pointer: fine)')?.matches === true;
 }
 
 function hasViewportChanged() {

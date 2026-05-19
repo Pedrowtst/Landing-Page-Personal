@@ -14,6 +14,8 @@ const ENDPOINT_PROGRESS_SNAP_EPSILON = 0.01;
 const SCROLL_SMOOTHING_ALPHA_DESKTOP = 0.32;
 const SCROLL_SMOOTHING_ALPHA_MOBILE = 0.22;
 const DOCK_ATTACH_PROGRESS = 1;
+const DOCK_SETTLE_PROGRESS = 0.992;
+const DOCK_HOLD_PROGRESS = 0.985;
 // iOS URL bar shows/hides ~80-120px. Layout refreshes shorter than this on
 // mobile create teleports; gate them so only real orientation changes recompute.
 const MOBILE_HEIGHT_NOISE_PX = 140;
@@ -24,6 +26,8 @@ export function initDumbbell3D() {
 
   const isMobile = getResponsiveViewportWidth() < 760;
   const anisotropy = isMobile ? 2 : 4;
+  let renderViewportWidth = innerWidth;
+  let renderViewportHeight = innerHeight;
 
   // --- Renderer / scene / camera ---
   const renderer = new THREE.WebGLRenderer({
@@ -32,14 +36,14 @@ export function initDumbbell3D() {
     powerPreference: 'high-performance',
   });
   renderer.setPixelRatio(getCappedDpr());
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(getRenderViewportWidth(), getRenderViewportHeight());
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   stage.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(32, getRenderViewportWidth() / getRenderViewportHeight(), 0.1, 100);
   camera.position.set(0, 0, 9);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.30));
@@ -70,12 +74,12 @@ export function initDumbbell3D() {
   // changes (width resize, fonts ready, model load, orientation change). They are NOT
   // recomputed during scroll. iOS URL bar / pinch / on-screen keyboard cannot trigger
   // a refresh storm because nothing listens for those events.
-  let params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), innerHeight));
+  let params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), getRenderViewportHeight()));
   let anchors = null;            // { start: world, dock: world, screen: { start, dock } }
   let cachedPath = null;         // pre-built Catmull-Rom path for the current anchors
   let dockDocumentPoint = null;
   let scrollStart = 0;           // page scroll at which animation begins (top of #topo)
-  let scrollEnd = innerHeight;   // page scroll at which animation lands at dock
+  let scrollEnd = getRenderViewportHeight();   // page scroll at which animation lands at dock
   let lastViewportSignature = getViewportSignature();
   let resizeDebounceTimer = 0;
   let mobileZoomSafeMode = false;
@@ -217,17 +221,19 @@ export function initDumbbell3D() {
     const run = () => {
       if (!immediate && !hasViewportChanged()) return;
       // On touch viewports the iOS URL bar collapse fires a resize event with
-      // an innerHeight change of ~80-120px. Treat that as visual noise: keep
-      // the renderer in sync with the new viewport but don't retarget the
-      // anchored animation, which would teleport the dumbbell mid-scroll.
+      // an innerHeight change of ~80-120px. Treat that as visual noise: don't
+      // resize the WebGL camera/canvas or retarget the anchored animation,
+      // which would teleport the dumbbell mid-scroll.
       const heightDelta = Math.abs(innerHeight - stableInnerHeight);
       const isUrlBarNoise = isMobile && heightDelta > 0 && heightDelta < MOBILE_HEIGHT_NOISE_PX
         && innerWidth === Math.round(params.viewport?.width || innerWidth);
+      if (isUrlBarNoise) {
+        lastViewportSignature = getViewportSignature();
+        return;
+      }
       lastViewportSignature = getViewportSignature();
       syncRendererToViewport();
-      if (!isUrlBarNoise) {
-        recomputeLayout();
-      }
+      recomputeLayout();
       syncStageAttachment();
       lastT = -1;
     };
@@ -294,7 +300,7 @@ export function initDumbbell3D() {
     state.scrollY = getPageScrollY();
     state.targetProgress = readScrollProgress(state.scrollY);
     state.progress = smoothProgress(state.progress, state.targetProgress);
-    state.docked = state.targetProgress >= DOCK_ATTACH_PROGRESS;
+    state.docked = updateDockState(state.docked, state.progress, state.targetProgress);
 
     const renderProgress = state.docked ? 1 : state.progress;
     if (shouldRender(renderProgress)) {
@@ -319,6 +325,11 @@ export function initDumbbell3D() {
       : PROGRESS_SNAP_EPSILON;
     if (Math.abs(diff) <= snapEpsilon) return target;
     return current + diff * smoothingAlpha;
+  }
+
+  function updateDockState(wasDocked, progress, target) {
+    if (wasDocked) return target >= DOCK_HOLD_PROGRESS;
+    return target >= DOCK_ATTACH_PROGRESS && progress >= DOCK_SETTLE_PROGRESS;
   }
 
   function shouldRender(renderProgress) {
@@ -368,7 +379,7 @@ export function initDumbbell3D() {
   function getDockedWorldPosition(fallbackPosition) {
     if (!dockDocumentPoint || state.scrollY <= scrollEnd) return fallbackPosition;
 
-    const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * innerHeight : 0;
+    const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * getRenderViewportHeight() : 0;
     return screenToWorldPoint({
       x: dockDocumentPoint.x,
       y: dockDocumentPoint.y - state.scrollY - dockLift,
@@ -377,16 +388,18 @@ export function initDumbbell3D() {
 
   // --- Layout helpers ---
   function syncRendererToViewport() {
-    camera.aspect = innerWidth / innerHeight;
+    renderViewportWidth = innerWidth;
+    renderViewportHeight = innerHeight;
+    camera.aspect = getRenderViewportWidth() / getRenderViewportHeight();
     applyCameraDepth();
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(getCappedDpr());
-    renderer.setSize(innerWidth, innerHeight);
+    renderer.setSize(getRenderViewportWidth(), getRenderViewportHeight());
   }
 
   function recomputeLayout() {
     stableInnerHeight = innerHeight;
-    params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), innerHeight));
+    params = applyZoomCompensation(getDumbbellResponsiveParams(getResponsiveViewportWidth(), getRenderViewportHeight()));
 
     const heroTrigger = document.getElementById('topo');
     scrollStart = heroTrigger ? Math.max(0, documentRect(heroTrigger).top) : 0;
@@ -407,9 +420,10 @@ export function initDumbbell3D() {
     // Distance from scrollStart to where the dock target should land at its desired
     // viewport y. Mirrors the previous getScrollEnd() heuristic but expressed as a
     // delta from the trigger's start so it works even if #topo isn't at scrollY=0.
-    const minSpan = Math.round(innerHeight * 0.85);
-    if (!dockPoint) return Math.max(minSpan, Math.round(innerHeight * 1.25));
-    const desiredY = (params.screen.dock.y || 0.4) * innerHeight;
+    const viewportHeight = getRenderViewportHeight();
+    const minSpan = Math.round(viewportHeight * 0.85);
+    if (!dockPoint) return Math.max(minSpan, Math.round(viewportHeight * 1.25));
+    const desiredY = (params.screen.dock.y || 0.4) * getRenderViewportHeight();
     return Math.max(minSpan, Math.round(dockPoint.y - desiredY - scrollStart));
   }
 
@@ -501,7 +515,7 @@ export function initDumbbell3D() {
 
   function getDockTargetScreenPoint(scrollAtAnchor, point = getDockTargetDocumentPoint()) {
     if (!point) return normalizedScreenPoint(params.screen.dock);
-    const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * innerHeight : 0;
+    const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * getRenderViewportHeight() : 0;
     return constrainScreenPoint({ x: point.x, y: point.y - scrollAtAnchor - dockLift });
   }
 
@@ -588,26 +602,38 @@ export function initDumbbell3D() {
   }
 
   function normalizedScreenPoint(screen) {
-    return constrainScreenPoint({ x: screen.x * innerWidth, y: screen.y * innerHeight });
+    return constrainScreenPoint({ x: screen.x * getRenderViewportWidth(), y: screen.y * getRenderViewportHeight() });
   }
 
   function constrainScreenPoint(point) {
+    const viewportWidth = getRenderViewportWidth();
+    const viewportHeight = getRenderViewportHeight();
     return {
-      x: THREE.MathUtils.clamp(point.x, innerWidth * 0.06, innerWidth * 0.94),
-      y: THREE.MathUtils.clamp(point.y, innerHeight * 0.08, innerHeight * 0.92),
+      x: THREE.MathUtils.clamp(point.x, viewportWidth * 0.06, viewportWidth * 0.94),
+      y: THREE.MathUtils.clamp(point.y, viewportHeight * 0.08, viewportHeight * 0.92),
     };
   }
 
   function screenToWorldPoint(point, worldZ = 0) {
+    const viewportWidth = getRenderViewportWidth();
+    const viewportHeight = getRenderViewportHeight();
     const distance = camera.position.z - worldZ;
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const worldHeight = 2 * distance * Math.tan(fovRad / 2);
     const worldWidth = worldHeight * camera.aspect;
     return {
-      x: (point.x / innerWidth - 0.5) * worldWidth,
-      y: (0.5 - point.y / innerHeight) * worldHeight,
+      x: (point.x / viewportWidth - 0.5) * worldWidth,
+      y: (0.5 - point.y / viewportHeight) * worldHeight,
       z: worldZ,
     };
+  }
+
+  function getRenderViewportWidth() {
+    return Number.isFinite(renderViewportWidth) && renderViewportWidth > 0 ? renderViewportWidth : innerWidth;
+  }
+
+  function getRenderViewportHeight() {
+    return Number.isFinite(renderViewportHeight) && renderViewportHeight > 0 ? renderViewportHeight : innerHeight;
   }
 }
 
