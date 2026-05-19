@@ -1,9 +1,10 @@
 /* eslint-env browser */
 
 const MIN_VISIBLE_MS = 750;
-const MAX_WAIT_MS = 6500;
+const MAX_WAIT_MS = 8500;
 const LIB_POLL_MS = 60;
 const LIB_POLL_MAX = 60;
+const DUMBBELL_GRACE_MS = 1500;
 
 export function initIntro() {
   const intro = document.getElementById('intro');
@@ -45,10 +46,19 @@ export function initIntro() {
   });
 
   if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
-    document.fonts.ready.then(() => setProgress(80));
+    document.fonts.ready.then(() => setProgress(78));
   } else {
-    setTimeout(() => setProgress(80), 600);
+    setTimeout(() => setProgress(78), 600);
   }
+
+  let dumbbellReady = false;
+  const onDumbbellReady = () => {
+    if (dumbbellReady) return;
+    dumbbellReady = true;
+    setProgress(96);
+    finish();
+  };
+  window.addEventListener('dumbbell:ready', onDumbbellReady, { once: true });
 
   let removed = false;
   const finish = () => {
@@ -76,17 +86,23 @@ export function initIntro() {
     let attempts = 0;
     const tick = () => {
       attempts += 1;
-      const ready = window.gsap && window.ScrollTrigger;
-      if (ready) {
-        setProgress(95);
-        finish();
+      const libsReady = window.gsap && window.ScrollTrigger;
+      if (libsReady) {
+        setProgress(88);
+        // Give the dumbbell a short grace window to load before we give up
+        // waiting and fade out without it being on screen.
+        if (!dumbbellReady) {
+          setTimeout(() => {
+            if (!dumbbellReady) finish();
+          }, DUMBBELL_GRACE_MS);
+        }
         return;
       }
       if (attempts >= LIB_POLL_MAX) {
         finish();
         return;
       }
-      setProgress(80 + (attempts / LIB_POLL_MAX) * 15);
+      setProgress(78 + (attempts / LIB_POLL_MAX) * 10);
       setTimeout(tick, LIB_POLL_MS);
     };
     tick();

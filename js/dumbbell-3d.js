@@ -42,10 +42,6 @@ export function initDumbbell3D() {
   const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 100);
   camera.position.set(0, 0, 9);
 
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
   scene.add(new THREE.AmbientLight(0xffffff, 0.30));
   const keyLight = new THREE.DirectionalLight(0xb88dff, 1.6);
   keyLight.position.set(-3, 4, 5);
@@ -56,6 +52,15 @@ export function initDumbbell3D() {
   const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
   rimLight.position.set(0, 6, -5);
   scene.add(rimLight);
+
+  // PMREM env baking from RoomEnvironment is the main-thread blocker at init
+  // (~150-400ms on mobile). The metallic dumbbell needs it to look correct -
+  // without it, fully metallic surfaces have nothing to reflect and render
+  // close to black. We bake it eagerly so the very first rendered frame is
+  // lit properly; the cost is paid once during the model download window.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
   const pivot = new THREE.Group();
   scene.add(pivot);
@@ -139,9 +144,16 @@ export function initDumbbell3D() {
       lastT = -1;
       // Re-measure once the model is in the tree (in case parent layout shifted).
       recomputeLayout();
+      // Render one frame immediately so the dumbbell is visible at the start
+      // anchor without waiting for the next rAF tick, and notify any loaders
+      // (e.g. the intro overlay) that the dumbbell is on screen.
+      renderFrame(state.progress);
+      window.dispatchEvent(new CustomEvent('dumbbell:ready'));
     },
     undefined,
-    () => {},
+    () => {
+      window.dispatchEvent(new CustomEvent('dumbbell:ready', { detail: { failed: true } }));
+    },
   );
 
   // --- Real layout listeners (NOT scroll) ---

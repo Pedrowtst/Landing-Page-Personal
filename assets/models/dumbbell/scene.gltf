@@ -2777,22 +2777,22 @@
   ],
   "images": [
     {
-      "uri": "textures/Base_baseColor.png"
+      "uri": "textures/Base_baseColor.jpg"
     },
     {
-      "uri": "textures/Base_metallicRoughness.png"
+      "uri": "textures/Base_metallicRoughness.jpg"
     },
     {
-      "uri": "textures/Base_normal.png"
+      "uri": "textures/Base_normal.jpg"
     },
     {
-      "uri": "textures/Disks_baseColor.png"
+      "uri": "textures/Disks_baseColor.jpg"
     },
     {
-      "uri": "textures/Disks_metallicRoughness.png"
+      "uri": "textures/Disks_metallicRoughness.jpg"
     },
     {
-      "uri": "textures/Disks_normal.png"
+      "uri": "textures/Disks_normal.jpg"
     }
   ],
   "materials": [

@@ -10,7 +10,8 @@
       "Bash(node --test tests/site-audit.test.mjs)",
       "PowerShell(node --version)",
       "Bash(which python3 *)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File \".claude/optimize-textures.ps1\")"
     ]
   }
 }
