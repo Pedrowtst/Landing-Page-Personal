@@ -222,6 +222,7 @@ header.hero {
   padding: 1px;
   background: var(--grad);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   clip-path: polygon(0 0, 100% 0, 100% 92%, 88% 100%, 0 100%);

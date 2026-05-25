@@ -84,7 +84,13 @@ export function initDumbbell3D() {
   let stageTop = '';
   let stageOpacityLast = -1;     // cache to avoid duplicate style writes
   let stableInnerHeight = innerHeight;
+  // Pre-allocated scratch objects reused by the render loop so we do not churn
+  // the GC at 60 fps. Anything assigned here is mutated in place each frame.
   const posOut = { x: 0, y: 0, z: 0 };
+  const rotOut = { x: 0, y: 0, z: 0 };
+  const poseOut = { position: posOut, rotation: rotOut };
+  const dockedScreenPoint = { x: 0, y: 0 };
+  const dockedWorldOut = { x: 0, y: 0, z: 0 };
 
   applyCameraDepth();
   recomputeLayout();
@@ -337,7 +343,7 @@ export function initDumbbell3D() {
       anchors?.dock || params.fallback.dock,
       params,
     ));
-    const pose = getDumbbellPose(t, params, path, posOut);
+    const pose = getDumbbellPose(t, params, path, posOut, rotOut, poseOut);
     const position = state.docked ? getDockedWorldPosition(pose.position) : pose.position;
 
     pivot.position.set(position.x, position.y, position.z);
@@ -372,10 +378,9 @@ export function initDumbbell3D() {
     if (!dockDocumentPoint || state.scrollY <= scrollEnd) return fallbackPosition;
 
     const dockLift = Number.isFinite(params.dockLift) ? params.dockLift * getRenderViewportHeight() : 0;
-    return screenToWorldPoint({
-      x: dockDocumentPoint.x,
-      y: dockDocumentPoint.y - state.scrollY - dockLift,
-    }, fallbackPosition.z);
+    dockedScreenPoint.x = dockDocumentPoint.x;
+    dockedScreenPoint.y = dockDocumentPoint.y - state.scrollY - dockLift;
+    return screenToWorldPoint(dockedScreenPoint, fallbackPosition.z, dockedWorldOut);
   }
 
   // --- Layout helpers ---
@@ -606,18 +611,18 @@ export function initDumbbell3D() {
     };
   }
 
-  function screenToWorldPoint(point, worldZ = 0) {
+  function screenToWorldPoint(point, worldZ = 0, out) {
     const viewportWidth = getRenderViewportWidth();
     const viewportHeight = getRenderViewportHeight();
     const distance = camera.position.z - worldZ;
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const worldHeight = 2 * distance * Math.tan(fovRad / 2);
     const worldWidth = worldHeight * camera.aspect;
-    return {
-      x: (point.x / viewportWidth - 0.5) * worldWidth,
-      y: (0.5 - point.y / viewportHeight) * worldHeight,
-      z: worldZ,
-    };
+    const target = out || { x: 0, y: 0, z: 0 };
+    target.x = (point.x / viewportWidth - 0.5) * worldWidth;
+    target.y = (0.5 - point.y / viewportHeight) * worldHeight;
+    target.z = worldZ;
+    return target;
   }
 
   function getRenderViewportWidth() {

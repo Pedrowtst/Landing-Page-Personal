@@ -25,6 +25,7 @@
   padding: 1px;
   background: linear-gradient(135deg, rgba(139, 92, 246, .3), rgba(96, 165, 250, .1) 50%, rgba(139, 92, 246, .3));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   transition: opacity .6s, background .6s;

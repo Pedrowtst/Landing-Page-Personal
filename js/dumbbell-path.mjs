@@ -105,7 +105,7 @@ export function buildDumbbellPath(start, dock, params) {
   return buildPathPoints(toVector(start), toVector(dock), p);
 }
 
-export function getDumbbellPose(progress, params, pathOrAnchors, outPosition) {
+export function getDumbbellPose(progress, params, pathOrAnchors, outPosition, outRotation, outPose) {
   const p = params || getDumbbellResponsiveParams(1280, 720);
   const t = clamp(progress, 0, 1);
   const points = isPathArray(pathOrAnchors)
@@ -123,14 +123,19 @@ export function getDumbbellPose(progress, params, pathOrAnchors, outPosition) {
     ? p.finalRotationZ
     : FINAL_SCREEN_ROTATION_Z;
 
-  return {
-    position,
-    rotation: {
-      x: 0,
-      y: ease * spinTurns * TAU,
-      z: ease * (tumbleTurns * TAU + finalRotationZ),
-    },
-  };
+  // Mutate the caller's rotation slot when provided, so the hot path (the
+  // dumbbell rAF loop) does not allocate a fresh {x,y,z} every frame.
+  const rotation = outRotation || { x: 0, y: 0, z: 0 };
+  rotation.x = 0;
+  rotation.y = ease * spinTurns * TAU;
+  rotation.z = ease * (tumbleTurns * TAU + finalRotationZ);
+
+  if (outPose) {
+    outPose.position = position;
+    outPose.rotation = rotation;
+    return outPose;
+  }
+  return { position, rotation };
 }
 
 function isPathArray(value) {
