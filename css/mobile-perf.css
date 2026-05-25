@@ -1,0 +1,89 @@
+/*
+ * Mobile-only performance overrides.
+ *
+ * On phones the page was choking on per-frame compositing cost: a fullscreen
+ * mix-blend-mode noise overlay, three full-viewport blur(120px) blobs, multiple
+ * backdrop-filters, and an infinite hero pan/scale animation all repaint on
+ * every scroll frame at 3x DPR. Each of these costs almost nothing on a
+ * desktop GPU but stacks into dropped frames on iPhones.
+ *
+ * Strategy: kill or downgrade the most expensive effects below the tablet
+ * breakpoint. Visuals lose a small amount of polish, but scroll stays smooth.
+ */
+
+@media (max-width: 768px) {
+  /* 1. Fullscreen noise overlay (`body::before`) forces a mix-blend-mode
+        composite over the entire viewport on every scroll frame. Drop it. */
+  body::before {
+    display: none !important;
+  }
+
+  /* 2. Background blobs use filter: blur(120px) on a 360x360 box. That blur
+        radius forces a huge offscreen surface to sample from on every paint.
+        Trade the soft gradient look for a much smaller (and cheaper) blur. */
+  .bg-blobs span {
+    filter: blur(48px);
+    opacity: .26;
+    mix-blend-mode: normal;
+  }
+
+  /* 3. Backdrop-filter is the single most expensive mobile property because
+        the browser has to re-blur the area under the element every frame the
+        scene behind it changes (i.e., during every scroll). Swap each one for
+        a slightly more opaque solid background so the visual weight stays. */
+  .nav {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background:
+      linear-gradient(90deg, rgba(10, 4, 22, .94), rgba(3, 4, 12, .92) 42%, rgba(6, 7, 18, .96)),
+      rgba(5, 5, 10, .92);
+  }
+
+  .nav-overlay-bg {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .btn-ghost {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, .04);
+  }
+
+  .story-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .hero-visual .badge {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(5, 5, 10, .85);
+  }
+
+  /* 4. The hero image stacks a 3-stage filter + mix-blend-mode on top of an
+        infinite scale animation. The blend mode is by far the worst part; the
+        filter chain we can keep because it bakes once. The 18s pan is constant
+        compositing churn for a barely visible 7% scale delta — disable it. */
+  .hero-visual .frame img {
+    mix-blend-mode: normal;
+    filter: contrast(1.08) saturate(.92) brightness(.82);
+    animation: none !important;
+    transform: scale(1.05);
+  }
+
+  /* 5. Vertical beam animations also constantly repaint inside the hero
+        visual. They sit behind the photo and are nearly invisible on small
+        screens anyway. */
+  .hero-visual .vbeam {
+    animation: none !important;
+    opacity: .25;
+  }
+}
+
+/* Even tighter budget on phones < 480px wide — drop the blobs entirely. */
+@media (max-width: 480px) {
+  .bg-blobs {
+    display: none !important;
+  }
+}
