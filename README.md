@@ -10,6 +10,9 @@ Landing page imersiva de página única para o personal trainer **Diego Santos**
 [![HTML5](https://img.shields.io/badge/HTML5-sem%20build-E34F26?logo=html5&logoColor=white)](#)
 [![CSS3](https://img.shields.io/badge/CSS3-modular-1572B6?logo=css3&logoColor=white)](#)
 [![WebGL](https://img.shields.io/badge/WebGL-3D-990000?logo=webgl&logoColor=white)](#)
+[![Site no ar](https://img.shields.io/badge/site-no%20ar-3FB950?logo=googlechrome&logoColor=white)](https://www.diegosantospersonal.com.br/)
+
+**🔗 Acesse o site ao vivo:** [www.diegosantospersonal.com.br](https://www.diegosantospersonal.com.br/)
 
 </div>
 
@@ -18,6 +21,7 @@ Landing page imersiva de página única para o personal trainer **Diego Santos**
 ## Índice
 
 - [Visão geral](#visão-geral)
+- [Site no ar](#site-no-ar)
 - [Demonstração](#demonstração)
 - [Principais recursos](#principais-recursos)
 - [Tecnologias e dependências](#tecnologias-e-dependências)
@@ -53,11 +57,19 @@ Princípios que guiam o projeto:
 
 ---
 
+## Site no ar
+
+O projeto está **publicado e em produção**, com domínio próprio. Quem visita o repositório pode ver o site funcionando ao vivo:
+
+**🔗 [www.diegosantospersonal.com.br](https://www.diegosantospersonal.com.br/)**
+
+---
+
 ## Demonstração
 
 <div align="center">
 
-<img src="assets/preview.png" alt="Seção hero da landing page de Diego Santos: halter 3D acima do título SUBA AO SEU PRÓXIMO PATAMAR, com CTAs e contadores" width="860" />
+<img src="assets/preview.gif" alt="Prévia animada da landing page de Diego Santos: halter 3D girando e percorrendo a página conforme o scroll" width="860" />
 
 <em>Seção hero: o halter 3D entra acima do título e percorre a trilha conforme o scroll.</em>
 
@@ -151,7 +163,7 @@ Todos os módulos respeitam `prefers-reduced-motion` e o site permanece totalmen
 ## Estrutura de pastas
 
 ```text
-Landing-Page-Personal/
+WebGL-Scroll-Animated-Personal-Trainer-Landing-built-with-Three.js-and-GSAP/
 ├── index.html                 # Marcação semântica + importmap + carregamento das libs
 ├── css/
 │   ├── main.css               # Agregador: @import de todas as folhas abaixo

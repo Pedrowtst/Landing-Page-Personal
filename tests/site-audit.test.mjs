@@ -39,7 +39,7 @@ const focusModalityJs = fs.existsSync('js/focus-modality.js')
 const animationsCss = fs.readFileSync('css/animations.css', 'utf8');
 const dumbbell3dJs = fs.readFileSync('js/dumbbell-3d.js', 'utf8');
 
-const CANONICAL_URL = 'https://diegosantos.fit/';
+const CANONICAL_URL = 'https://www.diegosantospersonal.com.br/';
 const WHATSAPP_URL = 'https://wa.me/557592022059?text=';
 const INSTAGRAM_URL = 'https://www.instagram.com/santos__diegooo/';
 
