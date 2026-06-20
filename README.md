@@ -55,11 +55,13 @@ Princípios que guiam o projeto:
 
 ## Demonstração
 
-> 📸 _Adicione aqui um screenshot ou GIF da página em ação (sugestão: `assets/preview.png` ou `assets/preview.gif`)._
+<div align="center">
 
-```
-[ hero com halter 3D ]  →  scroll  →  [ halter girando pela trilha ]  →  [ dock na seção História ]
-```
+<img src="assets/preview.png" alt="Seção hero da landing page de Diego Santos: halter 3D acima do título SUBA AO SEU PRÓXIMO PATAMAR, com CTAs e contadores" width="860" />
+
+<em>Seção hero: o halter 3D entra acima do título e percorre a trilha conforme o scroll.</em>
+
+</div>
 
 ---
 
@@ -314,7 +316,7 @@ Sem esse suporte, as bibliotecas via `importmap` não carregam (o conteúdo HTML
 |---|---|
 | **Desenvolvimento / proprietário** | Pedro Paiva Mautone Campos — [@Pedrowtst](https://github.com/Pedrowtst) |
 | **Desenvolvimento / proprietário** | Jonathan Delmonte — [@JonathanDelmonte](https://github.com/JonathanDelmonte) |
-| **Cliente / profissional retratado** | Diego Santos — Personal Trainer |
+| **Cliente / profissional retratado** | Diego Santos — Personal Trainer ([@santos__diegooo](https://www.instagram.com/santos__diegooo/)) |
 
 ---
 
